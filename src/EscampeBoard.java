@@ -10,6 +10,10 @@ import java.util.List;
 
 public class EscampeBoard implements Partie1 {
    
+    public EscampeBoard() {
+        resetState();
+    }
+
     private static final int[][] TAB_LISERE = {
         {1,2,2,3,1,2},
         {3,1,3,1,3,2},
@@ -27,14 +31,17 @@ public class EscampeBoard implements Partie1 {
     
     private void resetState(){
         // vidé le tableau board s'il contient autre chose du dernier modification. 
-        for(int i=0; i<board.length; i++){
-            for(int j=0; j<board.length; j++){
+        for(int i=0; i<6; i++){
+            for(int j=0; j<6; j++){
                 //on remplace tous le contenu avec "-" qui signifie vide.
                 board[i][j] ='-';
             }
         }
     }
     
+    /**
+    * Charge un plateau depuis un fichier texte
+    */
     public void setFromFile(String fileName){
         resetState();
         File f = new File(fileName);
@@ -294,9 +301,9 @@ public class EscampeBoard implements Partie1 {
             if (!inBounds(r, c)) {
                 return false;
             }
-            if (!isEmpty(r, c)) {
-                return false; // déjà occupé
-            }
+            //if (!isEmpty(r, c)) {
+            //    return false; // déjà occupé
+            //}
             if (used[r][c]) {
                 return false; // doublon dans la liste
             }
