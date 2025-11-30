@@ -301,9 +301,9 @@ public class EscampeBoard implements Partie1 {
             if (!inBounds(r, c)) {
                 return false;
             }
-            //if (!isEmpty(r, c)) {
-            //    return false; // déjà occupé
-            //}
+            if (!isEmpty(r, c)) {
+                return false; // déjà occupé
+            }
             if (used[r][c]) {
                 return false; // doublon dans la liste
             }
