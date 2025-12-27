@@ -1,3 +1,5 @@
+package escampe;
+
 // Bibliothéque utilisées 
 import java.io.File;
 import java.io.FileWriter; 
@@ -10,6 +12,24 @@ import java.util.List;
 
 public class EscampeBoard implements Partie1 {
    
+    public EscampeBoard() {
+        resetState();
+    }
+    // ----- POUR L'IA : COPIE DU PLATEAU -----
+
+    public EscampeBoard(EscampeBoard other) {
+        // copier board
+        for (int r = 0; r < 6; r++) {
+            for (int c = 0; c < 6; c++) {
+                this.board[r][c] = other.board[r][c];
+            }
+        }
+        // copier info placement
+        this.blackOnTop = other.blackOnTop;
+    }
+
+
+
     private static final int[][] TAB_LISERE = {
         {1,2,2,3,1,2},
         {3,1,3,1,3,2},
@@ -21,20 +41,23 @@ public class EscampeBoard implements Partie1 {
     private final char[][] board = new char[6][6];
     private Boolean blackOnTop = null;
 
-    public getTabLisere(){
+    public int[][] getTabLisere(){
         return TAB_LISERE;
     }
     
     private void resetState(){
         // vidé le tableau board s'il contient autre chose du dernier modification. 
-        for(int i=0; i<board.length; i++){
-            for(int j=0; j<board.length; j++){
+        for(int i=0; i<6; i++){
+            for(int j=0; j<6; j++){
                 //on remplace tous le contenu avec "-" qui signifie vide.
                 board[i][j] ='-';
             }
         }
     }
     
+    /**
+    * Charge un plateau depuis un fichier texte
+    */
     public void setFromFile(String fileName){
         resetState();
         File f = new File(fileName);
@@ -72,7 +95,9 @@ public class EscampeBoard implements Partie1 {
         try(FileWriter writer = new FileWriter(fileName)){
             // on écrit les lettres des colonnes ligne 1
             writer.write(columns_letter);
-            for(l; l < board.length; l++){
+            
+            //utilise le l deja declare 
+            for(; l < board.length; l++){
                 num = l + 1;
                 lineContent= String.format(
                     "%02d %c%c%c%c%c%c %02d %n",
@@ -95,7 +120,13 @@ public class EscampeBoard implements Partie1 {
             System.out.println("une erreur lors de l'ecriture dans le fichier");
             e.printStackTrace();
         }
-
+    }
+    public EscampeBoard copy() {
+        return new EscampeBoard(this);
+    }
+    // ----- POUR L'IA : LECTURE DU PLATEAU -----
+    public char getCell(int r, int c) {
+        return board[r][c];
     }
 
     // Vrai si player est bien "blanc" ou "noir"
@@ -189,29 +220,27 @@ public class EscampeBoard implements Partie1 {
     }
     @Override
     public boolean isValidMove(String move, String player) {
+        if (move == null) return false;
         move = move.trim();
 
         if ("E".equals(move)) {
             return true;
         }
-        // Vérifs de base ( si c'est null ou contient des espaces uniquement (vide))
-        if (move == null || move.isBlank()) {
-            return false;
-        }
-        if (!isValidPlayer(player)) {
-            return false;
-        }
-
-        move = move.trim();
-
-        // Cas placement (contient des '/')
-        if (move.contains("/")) {
-            return isValidPlacementMove(move, player);
-        }
-
-        // Cas coup "B1-D1"
-        return isValidNormalMove(move, player);
+    if (move.isBlank()) {
+        return false;
     }
+    if (!isValidPlayer(player)) {
+        return false;
+    }
+
+    // Cas placement
+    if (move.contains("/")) {
+        return isValidPlacementMove(move, player);
+    }
+
+    // Cas coup normal
+    return isValidNormalMove(move, player);
+}
 
     /**
     * Vérifie un coup de type "B1-D1".
@@ -247,7 +276,15 @@ public class EscampeBoard implements Partie1 {
         if (isOwnPiece(rTo, cTo, player)) {
             return false;
         }
-
+        // si paladins imprenables : interdiction de capturer un paladin adverse
+        char dest = board[rTo][cTo];
+        if ("blanc".equals(player)) {
+            // blanc attaque: paladin noir = 'n' (imprenable)
+            if (dest == 'n') return false;
+        } else {
+            // noir attaque: paladin blanc = 'b' (imprenable)
+            if (dest == 'b') return false;
+        }
         // récupérer la valeur du liséré pour la case de départ
         int lisere = TAB_LISERE[rFrom][cFrom];
 
@@ -407,6 +444,15 @@ public class EscampeBoard implements Partie1 {
                     if (!isValidPath(r, c, rTo, cTo, lisere)) {
                         continue;
                     }
+                    // --- si paladins imprenables : on interdit d’atterrir sur un paladin adverse ---
+                    char dest = board[rTo][cTo];
+                    if ("blanc".equals(player)) {
+                        // blanc ne peut pas capturer un paladin noir 'n'
+                        if (dest == 'n') continue;
+                    } else { // "noir"
+                        // noir ne peut pas capturer un paladin blanc 'b'
+                        if (dest == 'b') continue;
+                    }
 
                     // Construire le coup "B1-D1"
                     // ASCII : si c=0 -> 'A', c=1 -> 'B', ...
@@ -499,4 +545,88 @@ public class EscampeBoard implements Partie1 {
         return !whiteKing || !blackKing;
     }
 
+    public boolean hasUnicorn(String player) {
+        char u = "blanc".equals(player) ? 'B' : 'N';
+        for (int r = 0; r < 6; r++) {
+            for (int c = 0; c < 6; c++) {
+                if (board[r][c] == u) return true;
+            }
+        }
+        return false;
+    }
+
+    public static void main(String[] args) {
+
+        EscampeBoard board = new EscampeBoard();
+
+        System.out.println("===== TEST ESCAMPEBOARD =====");
+
+        // --- 1) RESET + AFFICHAGE ---
+        System.out.println("\n--- Plateau vide ---");
+        board.saveToFile("test_empty.txt");
+        System.out.println("Fichier test_empty.txt généré.");
+
+        // --- 2) TEST PLACEMENT NOIR ---
+        System.out.println("\n--- Test placement noir ---");
+        String placementNoir = "A1/B1/C1/D1/E1/F1";  // licorne + 5 paladins
+        System.out.println("Placement noir = " + placementNoir);
+        board.play(placementNoir, "noir");
+        board.saveToFile("test_noir.txt");
+        System.out.println("Fichier test_noir.txt généré.");
+
+        // --- 3) TEST PLACEMENT BLANC ---
+        System.out.println("\n--- Test placement blanc ---");
+        String placementBlanc = "A6/B6/C6/D6/E6/F6";
+        System.out.println("Placement blanc = " + placementBlanc);
+        board.play(placementBlanc, "blanc");
+        board.saveToFile("test_placement_complet.txt");
+        System.out.println("Plateau complet sauvegardé.");
+
+        // --- 4) TEST COUP NORMAL ---
+        System.out.println("\n--- Test coup normal ---");
+        String coup = "A1-A2";  // dépend du liséré
+        if (board.isValidMove(coup, "noir")) {
+            System.out.println("Coup valide : " + coup);
+            board.play(coup, "noir");
+            board.saveToFile("test_move.txt");
+            System.out.println("Coup joué et sauvegardé.");
+        } else {
+            System.out.println("Coup invalide : " + coup);
+        }
+
+        // --- 5) GENERATION DES COUPS POSSIBLES ---
+        System.out.println("\n--- Coups possibles pour blanc ---");
+        String[] coupsBlanc = board.possiblesMoves("blanc");
+        for (String m : coupsBlanc) {
+            System.out.println(" -> " + m);
+        }
+
+        // --- 6) FIN DE PARTIE ---
+        System.out.println("\n--- Test fin de partie ---");
+
+        if (board.gameOver()) {
+            System.out.println("La partie est déjà terminée !");
+        } else {
+            System.out.println("La partie continue.");
+        }
+
+        // On simule la capture d’une licorne :
+        System.out.println("On retire la licorne blanche pour tester…");
+        // On supprime 'B'
+        for (int r = 0; r < 6; r++) {
+            for (int c = 0; c < 6; c++) {
+                if (board.board[r][c] == 'B') {
+                    board.board[r][c] = '-';
+                }
+            }
+        }
+
+        if (board.gameOver()) {
+            System.out.println("Détection OK : la partie est terminée (licorne blanche capturée).");
+        } else {
+            System.out.println("ERREUR : gameOver() n’a pas détecté la fin.");
+        }
+
+        System.out.println("\n===== FIN TEST =====");
+    }
 }
