@@ -12,6 +12,9 @@ import java.util.List;
 
 public class EscampeBoard implements Partie1 {
    
+    //lisere du dernier coup joué (null si pas de coup forcé)
+    private Integer forcedLisere = null;
+    
     public EscampeBoard() {
         resetState();
     }
@@ -26,6 +29,7 @@ public class EscampeBoard implements Partie1 {
         }
         // copier info placement
         this.blackOnTop = other.blackOnTop;
+        this.forcedLisere = other.forcedLisere;
     }
 
 
@@ -267,6 +271,14 @@ public class EscampeBoard implements Partie1 {
             return false;
         }
 
+        // vérification du liséré forcé (si applicable) 
+        if (forcedLisere != null) {
+            int lisereDepart = TAB_LISERE[rFrom][cFrom];
+            if (lisereDepart != forcedLisere) {
+                return false;
+            }
+        }
+        
         // case départ doit contenir une pièce du joueur
         if (!isOwnPiece(rFrom, cFrom, player)) {
             return false;
@@ -420,6 +432,12 @@ public class EscampeBoard implements Partie1 {
 
                 int lisere = TAB_LISERE[r][c];
 
+
+                // liséré imposé par le coup précédent
+                if (forcedLisere != null && lisere != forcedLisere) {
+                    continue; //cette pièce n’a pas le bon liséré
+                }
+
                 // on regarde les 4 directions (haut, bas, gauche, droite)
                 int[][] dirs = {
                     {-1, 0}, // haut
@@ -480,7 +498,7 @@ public class EscampeBoard implements Partie1 {
 
         // Cas spécial : le joueur passe son tour avec "E"
         if ("E".equals(move)) {
-            // on ne modifie pas le plateau
+            forcedLisere = null;
             return;
         }
 
@@ -507,6 +525,9 @@ public class EscampeBoard implements Partie1 {
         char piece = board[rFrom][cFrom];
         board[rFrom][cFrom] = '-';   // case départ vidée
         board[rTo][cTo]     = piece; // on écrase éventuellement une pièce adverse
+
+        // mettre à jour le liséré forcé pour le prochain joueur
+        forcedLisere = TAB_LISERE[rTo][cTo];
     }
     // Joue un coup de placement "C6/A6/B5/D5/E6/F5"
     private void applyPlacementMove(String move, String player) {
